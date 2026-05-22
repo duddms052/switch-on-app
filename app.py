@@ -60,7 +60,7 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .wd-cell.sat { color: #2563EB; }
 .wd-cell.sun { color: #DC2626; }
 
-/* ── 달력 셀: 셀 클릭 마법 ── */
+/* ── 달력 셀: 셀 클릭 ── */
 .cal-cell-wrap {
     position: relative;
     width: 100%;
@@ -99,7 +99,6 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .dot.green { background: #22C55E; }
 .dot.blue  { background: #3B82F6; }
 
-/* 🚀 수정사항 1: 버튼을 완벽하게 숨기고 셀을 덮어씌워 셀 클릭이 되게 함 */
 div[data-testid="stColumn"]:has(.cal-cell) {
     position: relative;
 }
@@ -113,6 +112,17 @@ div[data-testid="stColumn"]:has(.cal-cell) button {
     width: 100% !important; height: 100% !important;
     opacity: 0 !important; cursor: pointer !important;
     border: none !important; background: transparent !important;
+}
+
+/* 🚀 핵심 해결 부분: 모바일 좁은 화면에서도 세로로 깨지지 않고 PC처럼 가로 유지 */
+div[data-testid="stHorizontalBlock"] {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 4px !important;
+    align-items: center !important;
+}
+div[data-testid="stColumn"] {
+    min-width: 0 !important;
 }
 
 /* ── 하단 상세 패널 ── */
@@ -299,7 +309,6 @@ for (yr, mo) in months_to_show:
                 wrap_cls = "cal-cell-wrap" + (" empty-wrap" if not is_diet else "")
                 d_html = dots_html(day_num) if is_diet else ""
 
-                # HTML 태그들을 깔끔하게 닫아줍니다.
                 cell_html = f"""
                 <div class='{wrap_cls}'>
                   <div class='{cell_cls}'>
@@ -311,7 +320,6 @@ for (yr, mo) in months_to_show:
                 """
                 st.markdown(cell_html, unsafe_allow_html=True)
 
-                # 이제 버튼은 눈에 보이지 않지만, 셀 위에 완벽하게 오버레이되어 터치됩니다!
                 if is_diet:
                     if st.button(" ", key=f"cal_{yr}_{mo}_{cell_date.day}", use_container_width=True):
                         st.session_state.selected_day_num = day_num
@@ -350,14 +358,12 @@ if sel is not None:
         for item_key, item_label in items:
             is_done = st.session_state.check_status[sel][item_key]
             
-            # 🚀 수정사항 2: 불필요한 배경 상자를 없애고, 한 줄로 예쁘게 묶어 정렬합니다.
             text_style = "font-size: 14px; font-weight: 600; color: #1E293B;"
             if is_done:
                 text_style = "font-size: 14px; font-weight: 600; color: #15803D; text-decoration: line-through; opacity: 0.85;"
             elif is_past_day:
                 text_style = "font-size: 14px; font-weight: 600; color: #94A3B8;"
 
-            # vertical_alignment="center"를 통해 텍스트와 버튼이 정확히 중앙에 오도록 맞춤
             col_txt, col_btn = st.columns([6, 1], vertical_alignment="center")
             with col_txt:
                 st.markdown(f"<div style='{text_style}'>{meal_icon(item_label)}</div>", unsafe_allow_html=True)
