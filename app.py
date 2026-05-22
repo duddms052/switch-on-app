@@ -1,292 +1,399 @@
 import streamlit as st
 import datetime
+import json
+import os
+import calendar
 
-# 1. 페이지 레이아웃 및 모던 모바일 UI 스타일 커스텀 정의
-st.set_page_config(page_title="스위치온 다이어트 플래너", layout="centered")
+DATA_FILE = os.path.join(os.path.dirname(__file__), "diet_data.json")
+
+def load_data():
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                raw = json.load(f)
+            if raw.get("start_date"):
+                raw["start_date"] = datetime.date.fromisoformat(raw["start_date"])
+            if raw.get("check_status"):
+                raw["check_status"] = {int(k): v for k, v in raw["check_status"].items()}
+            return raw
+        except Exception:
+            pass
+    return {"start_date": None, "check_status": None}
+
+def save_data():
+    payload = {
+        "start_date": st.session_state.start_date.isoformat() if st.session_state.start_date else None,
+        "check_status": st.session_state.check_status,
+    }
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=2)
+
+st.set_page_config(page_title="스위치온 다이어트", layout="centered")
 
 st.markdown("""
-    <style>
-    /* 전체 배경 회색 톤으로 모던하게 조정 */
-    .stApp { background-color: #F8F9FA; }
-    
-    /* 모바일 카드 스타일 컨테이너 (그림자 및 테두리 라운드) */
-    div[data-testid="stVerticalBlockBorderWrapper"] {
-        background-color: #FFFFFF !important;
-        border-radius: 16px !important;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.04) !important;
-        border: none !important;
-        padding: 16px !important;
-        margin-bottom: 10px;
-    }
-    
-    /* 상단 메인 날짜 및 타이틀 디자인 */
-    .date-main { color: #333333; font-size: 15px; font-weight: 700; text-align: center; margin-bottom: 4px; }
-    .day-main { color: #2F80ED; font-size: 24px; font-weight: 800; text-align: center; margin-bottom: 16px; }
-    
-    /* [달력 상단 날짜 카드 커스텀 디자인] */
-    .cal-date-card {
-        text-align: center;
-        padding: 6px 2px;
-        border-radius: 8px;
-        font-size: 12px;
-        font-weight: 700;
-        line-height: 1.4;
-        box-shadow: inset 0 0 0 1px #E0E0E0;
-    }
-    /* 요일별 글자 색상 세팅 */
-    .cal-date-wd { background-color: #FFFFFF; color: #333333; } /* 평일: 검정 */
-    .cal-date-sat { background-color: #FFFFFF; color: #2F80ED; } /* 토요일: 파란색 */
-    .cal-date-sun { background-color: #FFFFFF; color: #EB5757; } /* 일요일: 빨간색 */
-    
-    /* 오늘 날짜: 완벽한 파란색 채우기 버튼 스타일 + 흰색 글씨 */
-    .cal-date-today { 
-        background-color: #2F80ED !important; 
-        color: #FFFFFF !important; 
-        box-shadow: 0 4px 10px rgba(47, 128, 237, 0.3) !important;
-    }
-    
-    /* 달력 탭 내부 요약 식단/운동 템플릿 기본 스타일 */
-    .cal-meal-text {
-        font-size: 11px;
-        padding: 4px 6px;
-        border-radius: 6px;
-        margin-top: 5px;
-        text-align: left;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        font-weight: 600;
-    }
-    
-    /* [달력 아이콘 상태별 배경색 지정] */
-    .meal-status-normal { background-color: #F2F4F7; color: #4F4F4F; }
-    .meal-status-done { background-color: #E8F5E9; color: #2E7D32; border: 1px solid #C8E6C9; }
-    .meal-status-fail { background-color: #E0E0E0; color: #828282; text-decoration: line-through; }
-    
-    /* 주차별 타이틀 격차 여백 조정 */
-    .week-title {
-        font-size: 16px;
-        font-weight: 700;
-        color: #333333;
-        margin-top: 25px !important;
-        margin-bottom: 10px !important;
-    }
-    
-    /* 오늘의 식단 텍스트-체크박스 라인 중앙 정렬 세팅 */
-    .lbl-text {
-        font-size: 14px;
-        color: #333333;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        height: 38px;
-        background-color: #F2F4F7;
-        padding-left: 14px;
-        border-radius: 10px;
-        margin: 0 !important;
-    }
-    
-    div[data-testid="stColumn"] button {
-        margin-top: 1px !important;
-        height: 38px !important;
-        padding: 0 !important;
-    }
-    
-    /* 라디오 버튼 메뉴를 상단 탭 핀 형태로 스타일 최적화 */
-    div[data-testid="stRadio"] > label { display: none; }
-    div[data-testid="stRadio"] div[role="radiogroup"] {
-        flex-direction: row !important;
-        justify-content: center;
-        gap: 10px;
-        background-color: #E0E0E0;
-        padding: 6px;
-        border-radius: 12px;
-        margin-bottom: 20px;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] label {
-        background-color: transparent !important;
-        border: none !important;
-        padding: 6px 16px !important;
-        font-size: 15px !important;
-        font-weight: 700 !important;
-        color: #4F4F4F !important;
-    }
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
-        background-color: #FFFFFF !important;
-        border-radius: 8px !important;
-        color: #2F80ED !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
-# --- 2. 데이터 세션 상태 제어 ---
-if "check_status" not in st.session_state:
-    st.session_state.check_status = {day: {item: False for item in ["아침", "점심", "간식", "저녁", "운동"]} for day in range(1, 29)}
+html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
+.stApp { background-color: #F2F4F7; }
+.block-container { padding: 16px 12px 60px !important; max-width: 480px !important; margin: 0 auto; }
 
-if "start_date" not in st.session_state:
-    st.session_state.start_date = None
+.month-header {
+    text-align: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: #1E293B;
+    margin-bottom: 12px;
+}
+.wd-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    margin-bottom: 4px;
+}
+.wd-cell {
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 0;
+    color: #64748B;
+}
+.wd-cell.sat { color: #2563EB; }
+.wd-cell.sun { color: #DC2626; }
 
-# --- 3. 최초 접속 시 다이어트 시작일 입력 레이어 ---
+/* ── 달력 셀: 셀 클릭 마법 ── */
+.cal-cell-wrap {
+    position: relative;
+    width: 100%;
+    margin-bottom: 3px;
+}
+.cal-cell {
+    background: #FFFFFF;
+    border: 1.5px solid #E2E8F0;
+    border-radius: 10px;
+    min-height: 68px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 2px;
+    transition: border-color 0.15s, background 0.15s;
+    gap: 2px;
+}
+.cal-cell.empty {
+    background: transparent;
+    border-color: transparent;
+}
+.cal-cell.today { background: #2563EB; border-color: #2563EB; }
+.cal-cell.today .cell-date { color: #FFFFFF; }
+.cal-cell.today .cell-day  { color: #BFDBFE; }
+.cal-cell.selected { background: #DBEAFE; border-color: #2563EB; }
+.cal-cell.today.selected { background: #2563EB; border-color: #1D4ED8; box-shadow: 0 0 0 3px #BFDBFE; }
+.cal-cell.past { opacity: 0.55; }
+.cal-cell.sat .cell-date { color: #2563EB; }
+.cal-cell.sun .cell-date { color: #DC2626; }
+
+.cell-date { font-size: 16px; font-weight: 800; color: #1E293B; line-height: 1.1; }
+.cell-day { font-size: 9px; font-weight: 600; color: #94A3B8; line-height: 1.2; }
+.cell-dots { display: flex; gap: 3px; align-items: center; margin-top: 3px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: #E2E8F0; flex-shrink: 0; }
+.dot.green { background: #22C55E; }
+.dot.blue  { background: #3B82F6; }
+
+/* 🚀 수정사항 1: 버튼을 완벽하게 숨기고 셀을 덮어씌워 셀 클릭이 되게 함 */
+div[data-testid="stColumn"]:has(.cal-cell) {
+    position: relative;
+}
+div[data-testid="stColumn"]:has(.cal-cell) div.element-container:has(button) {
+    position: absolute !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important; height: 100% !important;
+    z-index: 10 !important;
+}
+div[data-testid="stColumn"]:has(.cal-cell) button {
+    width: 100% !important; height: 100% !important;
+    opacity: 0 !important; cursor: pointer !important;
+    border: none !important; background: transparent !important;
+}
+
+/* ── 하단 상세 패널 ── */
+.detail-panel {
+    background: #FFFFFF;
+    border-radius: 18px;
+    padding: 18px 16px 14px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    margin-top: 6px;
+}
+.detail-title { font-size: 16px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
+.detail-subtitle { font-size: 12px; color: #94A3B8; font-weight: 600; margin-left: 6px; }
+
+.food-box {
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #F0FDF4;
+    border-radius: 10px;
+    font-size: 11px;
+    color: #166534;
+    font-weight: 600;
+    line-height: 1.65;
+}
+
+div[data-testid="stVerticalBlockBorderWrapper"] {
+    background: #FFFFFF !important;
+    border-radius: 16px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
+    border: none !important;
+    padding: 14px !important;
+}
+.stCaption { font-size: 11px !important; color: #94A3B8 !important; text-align: center; }
+</style>
+""", unsafe_allow_html=True)
+
+# ── 세션 초기화 ─────────────────────────────────────────────────
+if "data_loaded" not in st.session_state:
+    saved = load_data()
+    st.session_state.start_date = saved.get("start_date")
+    default_status = {d: {k: False for k in ["아침","점심","간식","저녁","운동"]} for d in range(1, 29)}
+    if saved.get("check_status"):
+        for d in range(1, 29):
+            if d in saved["check_status"]:
+                default_status[d].update(saved["check_status"][d])
+    st.session_state.check_status = default_status
+    st.session_state.selected_day_num = None
+    st.session_state.data_loaded = True
+
+WEEKS_KOR  = ["월","화","수","목","금","토","일"]
+MONTHS_KOR = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"]
+
+FOOD_W1_3 = "두부, 무가당 플레인 요거트, 녹차, 허브티, 각종 채소류(오이, 브로콜리, 파프리카 등), 냉압착 오일류"
+FOOD_W1_4 = "1~3일차 식품 + 잡곡밥 반공기, 생선·회·해산물, 참치, 닭고기, 달걀, 버섯, 해조류, 삶은 고기류, 김치"
+FOOD_W2   = "1주차 식품 + 퀴노아, 콩류, 견과류, 블랙커피(오전 1잔), 우유 2잔, 무염치즈, 등푸른생선, 흰쌀밥"
+FOOD_W3   = "2주차 식품 + 닭/소/돼지(지방 적은 부위), 고구마, 바나나, 단호박, 밤, 토마토"
+FOOD_W4   = "3주차 식품 + 과일 허용 (하루 딱 1개만)"
+
+def get_day_data(day):
+    d = {"아침":"쉐이크","점심":"저탄수식","간식":"쉐이크","저녁":"무탄고단식","식품":"주차별 허용식품"}
+    if 1 <= day <= 3:
+        d["점심"] = "쉐이크"; d["저녁"] = "쉐이크"; d["식품"] = FOOD_W1_3
+    elif 4 <= day <= 7:
+        d["점심"] = "저탄수식"; d["저녁"] = "쉐이크"; d["식품"] = FOOD_W1_4
+    elif 8 <= day <= 14:
+        d["식품"] = FOOD_W2
+        if day == 10:
+            d["아침"] = d["점심"] = d["간식"] = "단식"; d["식품"] = "2주차 단식일"
+    elif 15 <= day <= 21:
+        d["저녁"] = "무탄고단식"; d["식품"] = FOOD_W3
+        if day in [16, 19]:
+            d["아침"] = d["점심"] = d["간식"] = "단식"; d["식품"] = "3주차 단식일"
+    elif 22 <= day <= 28:
+        d["점심"] = "일반식"; d["저녁"] = "저탄수식"; d["식품"] = FOOD_W4
+        if day in [23, 25, 27]:
+            d["아침"] = d["점심"] = d["간식"] = "단식"
+        elif day == 28:
+            d["점심"] = d["간식"] = d["저녁"] = "자유식"; d["식품"] = "최종일 자유식"
+    return d
+
+MEAL_ICONS = {"쉐이크":"🍼","저탄수식":"🥗","무탄고단식":"🥩","단식":"❌","일반식":"🍳","자유식":"🎉","운동":"🏋️"}
+def meal_icon(name):
+    for k, v in MEAL_ICONS.items():
+        if k in name: return f"{v} {name}"
+    return name
+
+today = datetime.date.today()
+
+def get_current_day():
+    if st.session_state.start_date is None: return None
+    elapsed = (today - st.session_state.start_date).days + 1
+    return elapsed if 1 <= elapsed <= 28 else None
+
+# ── 시작일 입력 (최초 1회) ───────────────────────────────────────
 if st.session_state.start_date is None:
-    st.title("🔥 스위치온 다이어트 플래너")
-    st.write("반갑습니다, 영은님! 나만의 다이어트 어플 세팅을 위해 시작일을 먼저 선택해 주세요.")
-    init_date = st.date_input("📅 다이어트 시작일 선택", datetime.date.today(), key="init_date_input")
-    if st.button("🚀 나만의 어플 시작하기", type="primary"):
+    st.title("🔥 스위치온 다이어트")
+    st.write("반갑습니다, 영은님! 시작일을 한 번만 설정하면 앱을 껐다 켜도 유지됩니다.")
+    init_date = st.date_input("📅 다이어트 시작일 선택", today, key="init_date_input")
+    if st.button("🚀 시작하기", type="primary"):
         st.session_state.start_date = init_date
+        st.session_state.selected_day_num = None
+        save_data()
         st.rerun()
     st.stop()
 
-WEEKS_KOR = ["월", "화", "수", "목", "금", "토", "일"]
+current_day = get_current_day()
+start = st.session_state.start_date
+end   = start + datetime.timedelta(days=27)
 
-# --- 4. PDF 원본 기반 데이터 정의 및 아이콘 변환 함수 ---
-FOOD_W1_3 = "두부, 무가당 플레인 요거트, 녹차, 허브티, 각종 채소류(오이, 브로콜리, 파프리카 등), 냉압착 오일류"
-FOOD_W1_4 = "1~3일차 식품 + 잡곡밥 반공기, 생선, 회, 해산물 전 종류, 참치, 닭고기, 달걀, 버섯, 해조류, 삶은 고기류(수육, 샤브샤브), 김치"
-FOOD_W2 = "1주차 식품 + 퀴노아, 콩류, 견과류, 블랙커피(오전 1잔), 우유 2잔, 무염치즈, 등푸른생선, 흰쌀밥"
-FOOD_W3 = "2주차 식품 + 닭고기/소고기/돼지고기 등 육류(지방 적은 부위), 고구마, 바나나, 단호박, 밤, 토마토"
-FOOD_W4 = "3주차 식품 + 과일 허용 (하루 딱 1개만)"
+if st.session_state.selected_day_num is None and current_day is not None:
+    st.session_state.selected_day_num = current_day
 
-def get_day_data(day):
-    data = {"아침": "쉐이크", "점심": "저탄수식", "간식": "쉐이크", "저녁": "무탄고단식", "식품": "주차별 허용식품"}
-    if 1 <= day <= 3:
-        data["점심"], data["저녁"] = "쉐이크", "쉐이크"; data["식품"] = FOOD_W1_3
-    elif 4 <= day <= 7:
-        data["점심"] = "저탄수식"; data["저녁"] = "쉐이크"; data["식품"] = FOOD_W1_4
-    elif 8 <= day <= 14:
-        data["식품"] = FOOD_W2
-        if day == 10: data["아침"], data["점심"], data["간식"] = "단식", "단식", "단식"; data["식품"] = "2주차 단식일"
-    elif 15 <= day <= 21:
-        data["저녁"] = "무탄고단식"; data["식품"] = FOOD_W3
-        if day in [16, 19]: data["아침"], data["점심"], data["간식"] = "단식", "단식", "단식"; data["식품"] = "3주차 단식일"
-    elif 22 <= day <= 28:
-        data["점심"], data["저녁"] = "일반식", "저탄수식"; data["식품"] = FOOD_W4
-        if day in [23, 25, 27]: data["아침"], data["점심"], data["간식"] = "단식", "단식", "단식"
-        elif day == 28: data["점심"], data["간식"], data["저녁"] = "자유식", "자유식", "자유식"; data["식품"] = "최종일 자유식"
-    return data
+def date_to_daynum(d):
+    delta = (d - start).days + 1
+    return delta if 1 <= delta <= 28 else None
 
-def get_meal_icon_text(meal_name):
-    if "쉐이크" in meal_name: return f"🍼 {meal_name}"
-    elif "저탄수식" in meal_name: return f"🥗 {meal_name}"
-    elif "무탄고단식" in meal_name: return f"🥩 {meal_name}"
-    elif "단식" in meal_name: return f"❌ {meal_name}"
-    elif "일반식" in meal_name or "자유식" in meal_name: return f"🍳 {meal_name}"
-    elif "운동" in meal_name: return f"🏋️ {meal_name}"
-    return meal_name
+months_to_show = []
+cur = datetime.date(start.year, start.month, 1)
+last_month = datetime.date(end.year, end.month, 1)
+while cur <= last_month:
+    months_to_show.append((cur.year, cur.month))
+    nm = cur.month + 1 if cur.month < 12 else 1
+    ny = cur.year if cur.month < 12 else cur.year + 1
+    cur = datetime.date(ny, nm, 1)
 
-# --- 오늘 날짜 기준 플래너 일차 고정 기틀 세팅 ---
-today = datetime.date.today()
-elapsed_days = (today - st.session_state.start_date).days + 1
-current_today_day = max(1, min(28, elapsed_days))
+def dots_html(day_num):
+    status = st.session_state.check_status[day_num]
+    html = "<div class='cell-dots'>"
+    for k in ["아침","점심","간식","저녁"]:
+        cls = "dot green" if status[k] else "dot"
+        html += f"<div class='{cls}'></div>"
+    cls = "dot blue" if status["운동"] else "dot"
+    html += f"<div class='{cls}'></div>"
+    html += "</div>"
+    return html
 
-# --- 5. 상단 모바일 내비게이션 토글 바 ---
-menu_options = ["🍽️ 오늘의 식단", "📅 전체 달력"]
-if "current_tab" not in st.session_state:
-    st.session_state.current_tab = "🍽️ 오늘의 식단"
+# ════════════════════════════════════════════════════════════════
+# 달력 렌더링
+# ════════════════════════════════════════════════════════════════
+for (yr, mo) in months_to_show:
+    st.markdown(f"<div class='month-header'>{yr}년 {MONTHS_KOR[mo-1]}</div>", unsafe_allow_html=True)
 
-selected_tab = st.radio(
-    label="메뉴",
-    options=menu_options,
-    index=menu_options.index(st.session_state.current_tab),
-    key="tab_selector"
-)
+    wd_html = "<div class='wd-row'>"
+    for lbl, cls in [("월",""),("화",""),("수",""),("목",""),("금",""),("토","sat"),("일","sun")]:
+        wd_html += f"<div class='wd-cell {cls}'>{lbl}</div>"
+    wd_html += "</div>"
+    st.markdown(wd_html, unsafe_allow_html=True)
 
-# ---------------------------------------------------------
-# [화면 1] 오늘의 식단 페이지
-# ---------------------------------------------------------
-if selected_tab == "🍽️ 오늘의 식단":
-    day_info = get_day_data(current_today_day)
-    
-    target_date = st.session_state.start_date + datetime.timedelta(days=current_today_day - 1)
-    weekday_idx = target_date.weekday()
-    day_of_week = WEEKS_KOR[weekday_idx]
-    
-    if weekday_idx == 5: color = "#2F80ED"
-    elif weekday_idx == 6: color = "#EB5757"
-    else: color = "#333333"
-        
-    st.markdown(f"<div class='date-main' style='color:{color};'>{target_date.strftime('%Y년 %m월 %d일')} ({day_of_week})</div>", unsafe_allow_html=True)
-    st.markdown(f"<div class='day-main'>Day {current_today_day}</div>", unsafe_allow_html=True)
-            
-    with st.container(border=True):
-        # [수정] 영양제 항목은 리스트에서 완벽 제거
-        task_items = [
-            ("아침", f"아침: {day_info['아침']}"),
-            ("점심", f"점심: {day_info['점심']}"),
-            ("간식", f"간식: {day_info['간식']}"),
-            ("저녁", f"저녁: {day_info['저녁']}"),
-            ("운동", "운동")
-        ]
-        
-        for item_key, item_label in task_items:
-            is_done = st.session_state.check_status[current_today_day][item_key]
-            btn_label = "✅" if is_done else "⬜"
-            
-            c_txt, c_btn = st.columns([4, 1])
-            with c_txt:
-                st.markdown(f"<div class='lbl-text'>{get_meal_icon_text(item_label)}</div>", unsafe_allow_html=True)
-            with c_btn:
-                if st.button(btn_label, key=f"main_b_{current_today_day}_{item_key}", use_container_width=True):
-                    st.session_state.check_status[current_today_day][item_key] = not is_done
-                    st.rerun()
-                    
-        st.write("")
-        with st.popover("🍏 오늘의 허용식품 확인", use_container_width=True):
-            st.write(day_info["식품"])
+    first_wd      = datetime.date(yr, mo, 1).weekday()
+    days_in_month = calendar.monthrange(yr, mo)[1]
+    cells = [None] * first_wd + [datetime.date(yr, mo, d) for d in range(1, days_in_month + 1)]
+    while len(cells) % 7 != 0:
+        cells.append(None)
 
-# ---------------------------------------------------------
-# [화면 2] 전체 달력 페이지
-# ---------------------------------------------------------
-else:
-    def get_style_class(target_day, item_key):
-        is_completed = st.session_state.check_status[target_day][item_key]
-        if is_completed: return "meal-status-done"
-        elif target_day < current_today_day: return "meal-status-fail"
-        return "meal-status-normal"
+    for week_start in range(0, len(cells), 7):
+        week_cells = cells[week_start:week_start+7]
+        if not any(c is not None and start <= c <= end for c in week_cells):
+            continue
 
-    for week in range(4):
-        st.markdown(f"<div class='week-title'>📌 {week+1}주차</div>", unsafe_allow_html=True)
         cols = st.columns(7)
-        
-        for i in range(7):
-            day_num = week * 7 + i + 1
-            cal_day_info = get_day_data(day_num)
-            
-            cal_date = st.session_state.start_date + datetime.timedelta(days=day_num - 1)
-            cal_weekday = cal_date.weekday()
-            
-            weekday_str = WEEKS_KOR[cal_weekday]
-            date_display_text = f"Day {day_num}<br>{cal_date.strftime('%m/%d')}({weekday_str})"
-            
-            is_today = (day_num == current_today_day)
-            
-            # [복구 및 검증 완료] 요일별 커스텀 스타일 완벽 적용
-            if is_today:
-                date_card_class = "cal-date-card cal-date-today" # 오늘: 파란색 배경 + 흰색 글씨
-            elif cal_weekday == 5:
-                date_card_class = "cal-date-card cal-date-sat"   # 토요일: 파란색 글씨
-            elif cal_weekday == 6:
-                date_card_class = "cal-date-card cal-date-sun"   # 일요일: 빨간색 글씨
-            else:
-                date_card_class = "cal-date-card cal-date-wd"    # 평일: 검정색 글씨
-            
+        for i, cell_date in enumerate(week_cells):
             with cols[i]:
-                st.markdown(f"<div class='{date_card_class}'>{date_display_text}</div>", unsafe_allow_html=True)
-                
-                # 아침, 점심, 간식, 저녁 + 운동까지 완벽히 연동 포함
-                st.markdown(f"""
-                    <div class='cal-meal-text {get_style_class(day_num, "아침")}'>{get_meal_icon_text(cal_day_info['아침'])}</div>
-                    <div class='cal-meal-text {get_style_class(day_num, "점심")}'>{get_meal_icon_text(cal_day_info['점심'])}</div>
-                    <div class='cal-meal-text {get_style_class(day_num, "간식")}'>{get_meal_icon_text(cal_day_info['간식'])}</div>
-                    <div class='cal-meal-text {get_style_class(day_num, "저녁")}'>{get_meal_icon_text(cal_day_info['저녁'])}</div>
-                    <div class='cal-meal-text {get_style_class(day_num, "운동")}'>{get_meal_icon_text("운동")}</div>
-                """, unsafe_allow_html=True)
+                if cell_date is None:
+                    st.markdown("<div class='cal-cell-wrap empty-wrap'><div class='cal-cell empty'></div></div>", unsafe_allow_html=True)
+                    continue
 
-# --- 6. 환경설정 창 (앱 최하단 숨김 레이어) ---
+                day_num     = date_to_daynum(cell_date)
+                wd_idx      = cell_date.weekday()
+                is_today    = (cell_date == today)
+                is_selected = (day_num is not None and day_num == st.session_state.selected_day_num)
+                is_diet     = (day_num is not None)
+                is_past     = (cell_date < today)
+
+                cls_list = ["cal-cell"]
+                if not is_diet:
+                    cls_list.append("empty")
+                else:
+                    if is_today:    cls_list.append("today")
+                    if is_selected: cls_list.append("selected")
+                    if is_past and not is_today: cls_list.append("past")
+                    if wd_idx == 5 and not is_today: cls_list.append("sat")
+                    if wd_idx == 6 and not is_today: cls_list.append("sun")
+
+                cell_cls = " ".join(cls_list)
+                wrap_cls = "cal-cell-wrap" + (" empty-wrap" if not is_diet else "")
+                d_html = dots_html(day_num) if is_diet else ""
+
+                # HTML 태그들을 깔끔하게 닫아줍니다.
+                cell_html = f"""
+                <div class='{wrap_cls}'>
+                  <div class='{cell_cls}'>
+                    <div class='cell-date'>{cell_date.day}</div>
+                    <div class='cell-day'>{'Day ' + str(day_num) if is_diet else ''}</div>
+                    {d_html}
+                  </div>
+                </div>
+                """
+                st.markdown(cell_html, unsafe_allow_html=True)
+
+                # 이제 버튼은 눈에 보이지 않지만, 셀 위에 완벽하게 오버레이되어 터치됩니다!
+                if is_diet:
+                    if st.button(" ", key=f"cal_{yr}_{mo}_{cell_date.day}", use_container_width=True):
+                        st.session_state.selected_day_num = day_num
+                        st.rerun()
+
+# ════════════════════════════════════════════════════════════════
+# 하단 상세 패널
+# ════════════════════════════════════════════════════════════════
+sel = st.session_state.selected_day_num
+
+if sel is not None:
+    sel_info    = get_day_data(sel)
+    sel_date    = start + datetime.timedelta(days=sel - 1)
+    sel_wd      = sel_date.weekday()
+    sel_color   = {5:"#2563EB", 6:"#DC2626"}.get(sel_wd, "#1E293B")
+    is_past_day = (sel_date < today)
+
+    st.markdown(f"""
+    <div class='detail-panel'>
+      <div class='detail-title'>
+        <span style='color:{sel_color}'>Day {sel}</span>
+        <span class='detail-subtitle'>{sel_date.strftime('%m/%d')} ({WEEKS_KOR[sel_wd]})</span>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    items = [
+        ("아침", f"아침: {sel_info['아침']}"),
+        ("점심", f"점심: {sel_info['점심']}"),
+        ("간식", f"간식: {sel_info['간식']}"),
+        ("저녁", f"저녁: {sel_info['저녁']}"),
+        ("운동", "운동"),
+    ]
+
+    with st.container(border=True):
+        for item_key, item_label in items:
+            is_done = st.session_state.check_status[sel][item_key]
+            
+            # 🚀 수정사항 2: 불필요한 배경 상자를 없애고, 한 줄로 예쁘게 묶어 정렬합니다.
+            text_style = "font-size: 14px; font-weight: 600; color: #1E293B;"
+            if is_done:
+                text_style = "font-size: 14px; font-weight: 600; color: #15803D; text-decoration: line-through; opacity: 0.85;"
+            elif is_past_day:
+                text_style = "font-size: 14px; font-weight: 600; color: #94A3B8;"
+
+            # vertical_alignment="center"를 통해 텍스트와 버튼이 정확히 중앙에 오도록 맞춤
+            col_txt, col_btn = st.columns([6, 1], vertical_alignment="center")
+            with col_txt:
+                st.markdown(f"<div style='{text_style}'>{meal_icon(item_label)}</div>", unsafe_allow_html=True)
+            with col_btn:
+                if st.button("✅" if is_done else "⬜", key=f"chk_{sel}_{item_key}", use_container_width=True):
+                    st.session_state.check_status[sel][item_key] = not is_done
+                    save_data()
+                    st.rerun()
+
+        st.markdown(f"<div class='food-box'>🍏 허용식품: {sel_info['식품']}</div>", unsafe_allow_html=True)
+
+else:
+    st.markdown(
+        "<div style='text-align:center;color:#94A3B8;font-size:13px;"
+        "font-weight:600;padding:24px 0;'>날짜를 눌러 식단을 확인하세요 👆</div>",
+        unsafe_allow_html=True
+    )
+
+# ── 환경설정 ─────────────────────────────────────────────────────
 st.markdown("---")
-with st.expander("⚙️ 다이어트 시작일 변경 및 데이터 리셋"):
-    change_date = st.date_input("새로운 시작일 설정", st.session_state.start_date)
-    if st.button("🔄 날짜 재반영 및 시스템 초기화"):
-        st.session_state.start_date = change_date
-        st.rerun()
+with st.expander("⚙️ 시작일 변경 및 데이터 초기화"):
+    change_date = st.date_input("새로운 시작일", st.session_state.start_date)
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📅 날짜만 변경"):
+            st.session_state.start_date = change_date
+            save_data()
+            st.rerun()
+    with col2:
+        if st.button("🗑️ 전체 초기화", type="secondary"):
+            st.session_state.check_status = {
+                d: {k: False for k in ["아침","점심","간식","저녁","운동"]}
+                for d in range(1, 29)
+            }
+            st.session_state.start_date = change_date
+            save_data()
+            st.rerun()
 
-st.caption("🚨 공통 수칙: 14시간 공복 유지, 30분마다 일어나서 움직이기 필수!")
+st.caption("🚨 공통 수칙: 14시간 공복 유지 · 30분마다 일어나서 움직이기 필수!")

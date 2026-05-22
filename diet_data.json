@@ -1,0 +1,201 @@
+{
+  "start_date": "2026-05-19",
+  "check_status": {
+    "1": {
+      "아침": true,
+      "점심": true,
+      "간식": true,
+      "저녁": true,
+      "운동": false
+    },
+    "2": {
+      "아침": true,
+      "점심": true,
+      "간식": true,
+      "저녁": true,
+      "운동": true
+    },
+    "3": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": true
+    },
+    "4": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "5": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "6": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "7": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "8": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "9": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "10": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "11": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "12": {
+      "아침": true,
+      "점심": false,
+      "간식": true,
+      "저녁": false,
+      "운동": false
+    },
+    "13": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "14": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "15": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "16": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "17": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "18": {
+      "아침": true,
+      "점심": false,
+      "간식": true,
+      "저녁": false,
+      "운동": true
+    },
+    "19": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "20": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "21": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "22": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "23": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "24": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "25": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "26": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "27": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    },
+    "28": {
+      "아침": false,
+      "점심": false,
+      "간식": false,
+      "저녁": false,
+      "운동": false
+    }
+  }
+}
