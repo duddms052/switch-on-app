@@ -1,20 +1,20 @@
 import streamlit as st
-import datetime
 import json
 import os
 import calendar
+from datetime import datetime, date, timedelta, timezone
 
-# 1. 파일 경로 설정 (데이터가 날아가지 않게 고정)
+# ── 1. 파일 경로 설정 (데이터가 날아가지 않게 고정) ───────────────────
 DATA_FILE = os.path.join(os.path.dirname(__file__), "diet_data.json")
 
-# 2. 데이터 불러오기 함수
+# ── 2. 데이터 불러오기 함수 ──────────────────────────────────────────
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 raw = json.load(f)
             if raw.get("start_date"):
-                raw["start_date"] = datetime.date.fromisoformat(raw["start_date"])
+                raw["start_date"] = date.fromisoformat(raw["start_date"])
             if raw.get("check_status"):
                 raw["check_status"] = {int(k): v for k, v in raw["check_status"].items()}
             return raw
@@ -22,7 +22,7 @@ def load_data():
             pass
     return {"start_date": None, "check_status": None}
 
-# 3. 데이터 저장하기 함수
+# ── 3. 데이터 저장하기 함수 ──────────────────────────────────────────
 def save_data():
     payload = {
         "start_date": st.session_state.start_date.isoformat() if st.session_state.start_date else None,
@@ -31,64 +31,26 @@ def save_data():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-# --- (이 아래로 기존의 st.set_page_config부터 쭉 복사해서 붙여넣으세요) ---
-# 기존 코드의 나머지 부분을 여기에 그대로 유지하면 됩니다.
-
+# ── 4. 페이지 및 스타일 설정 ─────────────────────────────────────────
 st.set_page_config(page_title="스위치온 다이어트", layout="centered")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .stApp { background-color: #F2F4F7; }
 .block-container { padding: 16px 12px 60px !important; max-width: 480px !important; margin: 0 auto; }
 
-.month-header {
-    text-align: center;
-    font-size: 20px;
-    font-weight: 800;
-    color: #1E293B;
-    margin-bottom: 12px;
-}
-.wd-row {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    margin-bottom: 4px;
-}
-.wd-cell {
-    text-align: center;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 0;
-    color: #64748B;
-}
+.month-header { text-align: center; font-size: 20px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
+.wd-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
+.wd-cell { text-align: center; font-size: 11px; font-weight: 700; padding: 4px 0; color: #64748B; }
 .wd-cell.sat { color: #2563EB; }
 .wd-cell.sun { color: #DC2626; }
 
-/* ── 달력 셀: 셀 클릭 ── */
-.cal-cell-wrap {
-    position: relative;
-    width: 100%;
-    margin-bottom: 3px;
-}
-.cal-cell {
-    background: #FFFFFF;
-    border: 1.5px solid #E2E8F0;
-    border-radius: 10px;
-    min-height: 68px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 5px 2px;
-    transition: border-color 0.15s, background 0.15s;
-    gap: 2px;
-}
-.cal-cell.empty {
-    background: transparent;
-    border-color: transparent;
-}
+.cal-cell-wrap { position: relative; width: 100%; margin-bottom: 3px; }
+.cal-cell { background: #FFFFFF; border: 1.5px solid #E2E8F0; border-radius: 10px; min-height: 68px; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px 2px; transition: border-color 0.15s, background 0.15s; gap: 2px; }
+.cal-cell.empty { background: transparent; border-color: transparent; }
 .cal-cell.today { background: #2563EB; border-color: #2563EB; }
 .cal-cell.today .cell-date { color: #FFFFFF; }
 .cal-cell.today .cell-day  { color: #BFDBFE; }
@@ -105,66 +67,24 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .dot.green { background: #22C55E; }
 .dot.blue  { background: #3B82F6; }
 
-div[data-testid="stColumn"]:has(.cal-cell) {
-    position: relative;
-}
-div[data-testid="stColumn"]:has(.cal-cell) div.element-container:has(button) {
-    position: absolute !important;
-    top: 0 !important; left: 0 !important;
-    width: 100% !important; height: 100% !important;
-    z-index: 10 !important;
-}
-div[data-testid="stColumn"]:has(.cal-cell) button {
-    width: 100% !important; height: 100% !important;
-    opacity: 0 !important; cursor: pointer !important;
-    border: none !important; background: transparent !important;
-}
+div[data-testid="stColumn"]:has(.cal-cell) { position: relative; }
+div[data-testid="stColumn"]:has(.cal-cell) div.element-container:has(button) { position: absolute !important; top: 0 !important; left: 0 !important; width: 100% !important; height: 100% !important; z-index: 10 !important; }
+div[data-testid="stColumn"]:has(.cal-cell) button { width: 100% !important; height: 100% !important; opacity: 0 !important; cursor: pointer !important; border: none !important; background: transparent !important; }
 
-/* 🚀 핵심 해결 부분: 모바일 좁은 화면에서도 세로로 깨지지 않고 PC처럼 가로 유지 */
-div[data-testid="stHorizontalBlock"] {
-    flex-direction: row !important;
-    flex-wrap: nowrap !important;
-    gap: 4px !important;
-    align-items: center !important;
-}
-div[data-testid="stColumn"] {
-    min-width: 0 !important;
-}
+div[data-testid="stHorizontalBlock"] { flex-direction: row !important; flex-wrap: nowrap !important; gap: 4px !important; align-items: center !important; }
+div[data-testid="stColumn"] { min-width: 0 !important; }
 
-/* ── 하단 상세 패널 ── */
-.detail-panel {
-    background: #FFFFFF;
-    border-radius: 18px;
-    padding: 18px 16px 14px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-    margin-top: 6px;
-}
+.detail-panel { background: #FFFFFF; border-radius: 18px; padding: 18px 16px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-top: 6px; }
 .detail-title { font-size: 16px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
 .detail-subtitle { font-size: 12px; color: #94A3B8; font-weight: 600; margin-left: 6px; }
+.food-box { margin-top: 10px; padding: 10px 12px; background: #F0FDF4; border-radius: 10px; font-size: 11px; color: #166534; font-weight: 600; line-height: 1.65; }
 
-.food-box {
-    margin-top: 10px;
-    padding: 10px 12px;
-    background: #F0FDF4;
-    border-radius: 10px;
-    font-size: 11px;
-    color: #166534;
-    font-weight: 600;
-    line-height: 1.65;
-}
-
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    background: #FFFFFF !important;
-    border-radius: 16px !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important;
-    border: none !important;
-    padding: 14px !important;
-}
+div[data-testid="stVerticalBlockBorderWrapper"] { background: #FFFFFF !important; border-radius: 16px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; border: none !important; padding: 14px !important; }
 .stCaption { font-size: 11px !important; color: #94A3B8 !important; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
-# ── 세션 초기화 ─────────────────────────────────────────────────
+# ── 5. 세션 및 데이터 초기화 ──────────────────────────────────────────
 if "data_loaded" not in st.session_state:
     saved = load_data()
     st.session_state.start_date = saved.get("start_date")
@@ -214,14 +134,16 @@ def meal_icon(name):
         if k in name: return f"{v} {name}"
     return name
 
-today = datetime.date.today()
+# 🚀 [핵심 해결] 서버가 어디 있든 무조건 한국 시간 기준으로 오늘 날짜 계산
+KST = timezone(timedelta(hours=9))
+today = datetime.now(KST).date()
 
 def get_current_day():
     if st.session_state.start_date is None: return None
     elapsed = (today - st.session_state.start_date).days + 1
     return elapsed if 1 <= elapsed <= 28 else None
 
-# ── 시작일 입력 (최초 1회) ───────────────────────────────────────
+# ── 6. 시작일 입력 (최초 1회) ───────────────────────────────────────
 if st.session_state.start_date is None:
     st.title("🔥 스위치온 다이어트")
     st.write("반갑습니다, 영은님! 시작일을 한 번만 설정하면 앱을 껐다 켜도 유지됩니다.")
@@ -235,7 +157,7 @@ if st.session_state.start_date is None:
 
 current_day = get_current_day()
 start = st.session_state.start_date
-end   = start + datetime.timedelta(days=27)
+end   = start + timedelta(days=27)  # 에러 났던 datetime.timedelta 제거
 
 if st.session_state.selected_day_num is None and current_day is not None:
     st.session_state.selected_day_num = current_day
@@ -245,13 +167,13 @@ def date_to_daynum(d):
     return delta if 1 <= delta <= 28 else None
 
 months_to_show = []
-cur = datetime.date(start.year, start.month, 1)
-last_month = datetime.date(end.year, end.month, 1)
+cur = date(start.year, start.month, 1)
+last_month = date(end.year, end.month, 1)
 while cur <= last_month:
     months_to_show.append((cur.year, cur.month))
     nm = cur.month + 1 if cur.month < 12 else 1
     ny = cur.year if cur.month < 12 else cur.year + 1
-    cur = datetime.date(ny, nm, 1)
+    cur = date(ny, nm, 1)
 
 def dots_html(day_num):
     status = st.session_state.check_status[day_num]
@@ -264,9 +186,7 @@ def dots_html(day_num):
     html += "</div>"
     return html
 
-# ════════════════════════════════════════════════════════════════
-# 달력 렌더링
-# ════════════════════════════════════════════════════════════════
+# ── 7. 달력 렌더링 ──────────────────────────────────────────────────
 for (yr, mo) in months_to_show:
     st.markdown(f"<div class='month-header'>{yr}년 {MONTHS_KOR[mo-1]}</div>", unsafe_allow_html=True)
 
@@ -276,9 +196,9 @@ for (yr, mo) in months_to_show:
     wd_html += "</div>"
     st.markdown(wd_html, unsafe_allow_html=True)
 
-    first_wd      = datetime.date(yr, mo, 1).weekday()
+    first_wd      = date(yr, mo, 1).weekday()
     days_in_month = calendar.monthrange(yr, mo)[1]
-    cells = [None] * first_wd + [datetime.date(yr, mo, d) for d in range(1, days_in_month + 1)]
+    cells = [None] * first_wd + [date(yr, mo, d) for d in range(1, days_in_month + 1)]
     while len(cells) % 7 != 0:
         cells.append(None)
 
@@ -331,14 +251,12 @@ for (yr, mo) in months_to_show:
                         st.session_state.selected_day_num = day_num
                         st.rerun()
 
-# ════════════════════════════════════════════════════════════════
-# 하단 상세 패널
-# ════════════════════════════════════════════════════════════════
+# ── 8. 하단 상세 패널 ────────────────────────────────────────────────
 sel = st.session_state.selected_day_num
 
 if sel is not None:
     sel_info    = get_day_data(sel)
-    sel_date    = start + datetime.timedelta(days=sel - 1)
+    sel_date    = start + timedelta(days=sel - 1)  # 에러 났던 datetime.timedelta 제거
     sel_wd      = sel_date.weekday()
     sel_color   = {5:"#2563EB", 6:"#DC2626"}.get(sel_wd, "#1E293B")
     is_past_day = (sel_date < today)
@@ -388,7 +306,7 @@ else:
         unsafe_allow_html=True
     )
 
-# ── 환경설정 ─────────────────────────────────────────────────────
+# ── 9. 환경설정 및 초기화 ─────────────────────────────────────────────
 st.markdown("---")
 with st.expander("⚙️ 시작일 변경 및 데이터 초기화"):
     change_date = st.date_input("새로운 시작일", st.session_state.start_date)
