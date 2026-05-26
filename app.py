@@ -4,8 +4,10 @@ import json
 import os
 import calendar
 
+# 1. 파일 경로 설정 (데이터가 날아가지 않게 고정)
 DATA_FILE = os.path.join(os.path.dirname(__file__), "diet_data.json")
 
+# 2. 데이터 불러오기 함수
 def load_data():
     if os.path.exists(DATA_FILE):
         try:
@@ -20,6 +22,7 @@ def load_data():
             pass
     return {"start_date": None, "check_status": None}
 
+# 3. 데이터 저장하기 함수
 def save_data():
     payload = {
         "start_date": st.session_state.start_date.isoformat() if st.session_state.start_date else None,
@@ -27,6 +30,9 @@ def save_data():
     }
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
+
+# --- (이 아래로 기존의 st.set_page_config부터 쭉 복사해서 붙여넣으세요) ---
+# 기존 코드의 나머지 부분을 여기에 그대로 유지하면 됩니다.
 
 st.set_page_config(page_title="스위치온 다이어트", layout="centered")
 
