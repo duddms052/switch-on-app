@@ -31,7 +31,7 @@ def save_data():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-# ── 4. 페이지 및 스타일 설정 (디자인 수정 완료) ──────────────────────
+# ── 4. 페이지 및 스타일 설정 ─────────────────────────────────────────
 st.set_page_config(page_title="스위치온 다이어트", layout="centered")
 
 st.markdown("""
@@ -66,7 +66,7 @@ header { display: none !important; }
 .cell-date { font-size: 16px; font-weight: 800; color: #1E293B; line-height: 1.1; }
 .cell-day { font-size: 9px; font-weight: 600; color: #94A3B8; line-height: 1.2; }
 
-/* 동그라미 사이즈 및 간격 조정 (좌우 안 닿게 가운데 정렬) */
+/* 동그라미 사이즈 및 간격 조정 */
 .cell-dots { display: flex; gap: 1.5px; align-items: center; justify-content: center; margin-top: 3px; width: 100%; }
 .dot { width: 6.5px; height: 6.5px; border-radius: 50%; background: #E2E8F0; flex-shrink: 0; }
 .dot.green { background: #22C55E; }
@@ -83,7 +83,6 @@ div[data-testid="stColumn"] { min-width: 0 !important; }
 .detail-title { font-size: 16px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
 .detail-subtitle { font-size: 12px; color: #94A3B8; font-weight: 600; margin-left: 6px; }
 
-/* 허용식품 칸 테두리 안쪽으로 예쁘게 들어가도록 여백 및 디자인 수정 */
 .food-box { margin-top: 14px; margin-bottom: 4px; padding: 12px; background: #F0FDF4; border-radius: 10px; font-size: 11px; color: #166534; font-weight: 600; line-height: 1.65; border: 1px solid #BBF7D0; }
 
 div[data-testid="stVerticalBlockBorderWrapper"] { background: #FFFFFF !important; border-radius: 16px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; border: 1px solid #E2E8F0 !important; padding: 18px 14px 14px 14px !important; }
@@ -113,26 +112,42 @@ FOOD_W2   = "1주차 식품 + 퀴노아, 콩류, 견과류, 블랙커피(오전 
 FOOD_W3   = "2주차 식품 + 닭/소/돼지(지방 적은 부위), 고구마, 바나나, 단호박, 밤, 토마토"
 FOOD_W4   = "3주차 식품 + 과일 허용 (하루 딱 1개만)"
 
+# 원본 엑셀 기준 식단 정밀 수정
 def get_day_data(day):
     d = {"아침":"쉐이크","점심":"저탄수식","간식":"쉐이크","저녁":"무탄고단식","식품":"주차별 허용식품"}
+    
+    # 1주차
     if 1 <= day <= 3:
         d["점심"] = "쉐이크"; d["저녁"] = "쉐이크"; d["식품"] = FOOD_W1_3
     elif 4 <= day <= 7:
         d["점심"] = "저탄수식"; d["저녁"] = "쉐이크"; d["식품"] = FOOD_W1_4
+        
+    # 2주차 (Day 11 단식일)
     elif 8 <= day <= 14:
         d["식품"] = FOOD_W2
-        if day == 10:
-            d["아침"] = d["점심"] = d["간식"] = "단식"; d["식품"] = "2주차 단식일"
+        if day == 11:
+            d["아침"] = d["점심"] = d["간식"] = "단식"
+            d["저녁"] = "무탄고단식"  # 단식 후 저녁 식사 진행
+            d["식품"] = "⚠️ 2주차 24시간 단식일 (저녁은 무탄고단식)"
+            
+    # 3주차 (Day 17, 20 단식일)
     elif 15 <= day <= 21:
-        d["저녁"] = "무탄고단식"; d["식품"] = FOOD_W3
-        if day in [16, 19]:
-            d["아침"] = d["점심"] = d["간식"] = "단식"; d["식품"] = "3주차 단식일"
+        d["식품"] = FOOD_W3
+        if day in [17, 20]:
+            d["아침"] = d["점심"] = d["간식"] = "단식"
+            d["저녁"] = "무탄고단식"  # 단식 후 저녁 식사 진행
+            d["식품"] = f"⚠️ 3주차 단식일 (저녁은 무탄고단식)"
+            
+    # 4주차 (Day 23, 25, 27 격일 단식일 저녁 '저탄수식' 전면 교정)
     elif 22 <= day <= 28:
-        d["점심"] = "일반식"; d["저녁"] = "저탄수식"; d["식품"] = FOOD_W4
+        d["점심"] = "일반식 (정량의 1/2)"; d["저녁"] = "저탄수식"; d["식품"] = FOOD_W4
         if day in [23, 25, 27]:
             d["아침"] = d["점심"] = d["간식"] = "단식"
+            d["저녁"] = "저탄수식"  # 원본 엑셀 기준: 단식을 깨는 저녁 저탄수식 적용
+            d["식품"] = f"⚠️ 4주차 격일 단식일 (저녁은 저탄수식)"
         elif day == 28:
-            d["점심"] = d["간식"] = d["저녁"] = "자유식"; d["식품"] = "최종일 자유식"
+            d["점심"] = d["간식"] = d["저녁"] = "자유식"; d["식품"] = "🎉 최종일 자유식 완료!"
+            
     return d
 
 MEAL_ICONS = {"쉐이크":"🍼","저탄수식":"🥗","무탄고단식":"🥩","단식":"❌","일반식":"🍳","자유식":"🎉","운동":"🏋️"}
