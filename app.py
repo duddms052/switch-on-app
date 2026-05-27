@@ -31,18 +31,21 @@ def save_data():
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
-# ── 4. 페이지 및 스타일 설정 ─────────────────────────────────────────
+# ── 4. 페이지 및 스타일 설정 (디자인 수정 완료) ──────────────────────
 st.set_page_config(page_title="스위치온 다이어트", layout="centered")
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght=400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
 html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 .stApp { background-color: #F2F4F7; }
-.block-container { padding: 16px 12px 60px !important; max-width: 480px !important; margin: 0 auto; }
 
-.month-header { text-align: center; font-size: 20px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
+/* 상단 스크롤 없애기 (여백 최소화 및 기본 헤더 숨김) */
+.block-container { padding: 8px 12px 60px !important; max-width: 480px !important; margin: 0 auto; }
+header { display: none !important; }
+
+.month-header { text-align: center; font-size: 20px; font-weight: 800; color: #1E293B; margin-bottom: 12px; margin-top: 10px; }
 .wd-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 4px; }
 .wd-cell { text-align: center; font-size: 11px; font-weight: 700; padding: 4px 0; color: #64748B; }
 .wd-cell.sat { color: #2563EB; }
@@ -62,8 +65,10 @@ html, body, [class*="css"] { font-family: 'Noto Sans KR', sans-serif; }
 
 .cell-date { font-size: 16px; font-weight: 800; color: #1E293B; line-height: 1.1; }
 .cell-day { font-size: 9px; font-weight: 600; color: #94A3B8; line-height: 1.2; }
-.cell-dots { display: flex; gap: 3px; align-items: center; margin-top: 3px; }
-.dot { width: 7px; height: 7px; border-radius: 50%; background: #E2E8F0; flex-shrink: 0; }
+
+/* 동그라미 사이즈 및 간격 조정 (좌우 안 닿게 가운데 정렬) */
+.cell-dots { display: flex; gap: 1.5px; align-items: center; justify-content: center; margin-top: 3px; width: 100%; }
+.dot { width: 6.5px; height: 6.5px; border-radius: 50%; background: #E2E8F0; flex-shrink: 0; }
 .dot.green { background: #22C55E; }
 .dot.blue  { background: #3B82F6; }
 
@@ -77,9 +82,11 @@ div[data-testid="stColumn"] { min-width: 0 !important; }
 .detail-panel { background: #FFFFFF; border-radius: 18px; padding: 18px 16px 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-top: 6px; }
 .detail-title { font-size: 16px; font-weight: 800; color: #1E293B; margin-bottom: 12px; }
 .detail-subtitle { font-size: 12px; color: #94A3B8; font-weight: 600; margin-left: 6px; }
-.food-box { margin-top: 10px; padding: 10px 12px; background: #F0FDF4; border-radius: 10px; font-size: 11px; color: #166534; font-weight: 600; line-height: 1.65; }
 
-div[data-testid="stVerticalBlockBorderWrapper"] { background: #FFFFFF !important; border-radius: 16px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; border: none !important; padding: 14px !important; }
+/* 허용식품 칸 테두리 안쪽으로 예쁘게 들어가도록 여백 및 디자인 수정 */
+.food-box { margin-top: 14px; margin-bottom: 4px; padding: 12px; background: #F0FDF4; border-radius: 10px; font-size: 11px; color: #166534; font-weight: 600; line-height: 1.65; border: 1px solid #BBF7D0; }
+
+div[data-testid="stVerticalBlockBorderWrapper"] { background: #FFFFFF !important; border-radius: 16px !important; box-shadow: 0 2px 8px rgba(0,0,0,0.06) !important; border: 1px solid #E2E8F0 !important; padding: 18px 14px 14px 14px !important; }
 .stCaption { font-size: 11px !important; color: #94A3B8 !important; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
@@ -134,7 +141,6 @@ def meal_icon(name):
         if k in name: return f"{v} {name}"
     return name
 
-# 🚀 [핵심 해결] 서버가 어디 있든 무조건 한국 시간 기준으로 오늘 날짜 계산
 KST = timezone(timedelta(hours=9))
 today = datetime.now(KST).date()
 
@@ -157,7 +163,7 @@ if st.session_state.start_date is None:
 
 current_day = get_current_day()
 start = st.session_state.start_date
-end   = start + timedelta(days=27)  # 에러 났던 datetime.timedelta 제거
+end   = start + timedelta(days=27)
 
 if st.session_state.selected_day_num is None and current_day is not None:
     st.session_state.selected_day_num = current_day
@@ -256,7 +262,7 @@ sel = st.session_state.selected_day_num
 
 if sel is not None:
     sel_info    = get_day_data(sel)
-    sel_date    = start + timedelta(days=sel - 1)  # 에러 났던 datetime.timedelta 제거
+    sel_date    = start + timedelta(days=sel - 1)
     sel_wd      = sel_date.weekday()
     sel_color   = {5:"#2563EB", 6:"#DC2626"}.get(sel_wd, "#1E293B")
     is_past_day = (sel_date < today)
